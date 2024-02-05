@@ -28,4 +28,4 @@ if __name__ == "__main__":
 
     query = "What are Transformers?"
     answer = pipeline.answer(query)
-    print("\nFINAL ANSWER:\n", answer)
+    print("\nFINAL ANSWER:\n", answer)// update 2024-02-05 12:12:37
