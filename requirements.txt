@@ -8,4 +8,4 @@ faiss-cpu
 chromadb
 langchain-groq
 python-dotenv
-redis
+redis// update 2024-02-08 12:25:17

@@ -158,4 +158,4 @@ final_context = "\n\n".join(contexts)
 prompt = f"Use the context provided {final_context} and give the answer in 3 points only. The users query:{query}"
 
 answer = llm.invoke(prompt)
-print(answer.content)
+print(answer.content)// update 2024-02-08 12:25:17
