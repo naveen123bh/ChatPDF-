@@ -45,4 +45,4 @@ class DocumentIngestion:
         return chunks
     
     def load_and_chunk(self)->list[Document]:
-        return self.chunking(self.loadDoc())
+        return self.chunking(self.loadDoc())// update 2024-02-08 17:36:46
