@@ -46,3 +46,4 @@ class DocumentIngestion:
     
     def load_and_chunk(self)->list[Document]:
         return self.chunking(self.loadDoc())// update 2024-02-08 17:36:46
+// update 2024-03-13 17:39:52
