@@ -96,4 +96,4 @@ class RAGPipeline:
         # 5. Cache the response
         self.cache.set_response(query, response)
 
-        return response
+        return response// update 2024-03-26 16:39:19
