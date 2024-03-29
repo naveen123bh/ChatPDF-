@@ -97,3 +97,4 @@ class RAGPipeline:
         self.cache.set_response(query, response)
 
         return response// update 2024-03-26 16:39:19
+// update 2024-03-29 8:24:12
