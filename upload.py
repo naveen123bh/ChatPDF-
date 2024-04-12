@@ -40,3 +40,4 @@ async def upload_pdf(file:UploadFile= File(...)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )// update 2024-04-12 17:8:3
+// update 2024-04-12 11:38:43
