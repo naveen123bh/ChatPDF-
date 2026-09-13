@@ -1,56 +1,85 @@
-from qdrant_client.models import Distance
-from dotenv import load_dotenv
 from dataclasses import dataclass
+from pathlib import Path
 import os
 
-load_dotenv()
+from dotenv import load_dotenv
 
+
+# =============================================================
+# LOAD ENVIRONMENT VARIABLES
+# =============================================================
+
+# Project root
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load .env when running locally
+load_dotenv(
+    BASE_DIR / ".env"
+)
+
+
+# =============================================================
+# CONFIGURATION
+# =============================================================
 
 @dataclass
 class Config:
-    embedding_model: str = "all-MiniLM-L6-v2"
-    chunking_model: str = "all-MiniLM-L6-v2"
 
-    breakpoint_threshold_type: str = "percentile"
-    breakpoint_threshold_amount: int = 95
+    # ---------------------------------------------------------
+    # Paths
+    # ---------------------------------------------------------
 
-    path: str = "../data/pdf"
+    path: str = str(
+        BASE_DIR / "data" / "pdf"
+    )
 
-    # Local Qdrant
-    qdrant_api_key = None
-    qdrant_url = "http://localhost:6333"
+    # ---------------------------------------------------------
+    # Embeddings
+    # ---------------------------------------------------------
 
-    collection_name: str = "ChatPDF"
+    embedding_model: str = (
+        "all-MiniLM-L6-v2"
+    )
 
-    vector_size = 384
-    vector_distance = Distance.COSINE
+    vector_size: int = 384
 
-    # Reranking
-    reranker_model = "BAAI/bge-reranker-base"
+    # ---------------------------------------------------------
+    # Retrieval
+    # ---------------------------------------------------------
+
+    vector_top_k: int = 5
+
+    top_k: int = 5
 
     # Reciprocal Rank Fusion
-    rrf_k = 60
+    rrf_k: int = 60
 
-    rerank_top_k = 5
+    # CrossEncoder reranking
+    reranker_model: str = (
+        "BAAI/bge-reranker-base"
+    )
 
-    # Local Redis
-    redis_port = 6379
-    redis_host = "localhost"
-    redis_username = None
-    redis_password = None
+    rerank_top_k: int = 5
 
-    response_cache_ttl = 3600
+    # ---------------------------------------------------------
+    # Groq LLM
+    # ---------------------------------------------------------
 
-    # Groq
-    groq_api_key = os.getenv("GROQ_API_KEY")
-    llm_model = "openai/gpt-oss-20b"
-    llm_temperature = 0.1
-    max_token = 1024
+    groq_api_key: str | None = (
+        os.getenv("GROQ_API_KEY")
+    )
 
-    qdrant_batch_size: int = 50
+    llm_model: str = (
+        "openai/gpt-oss-20b"
+    )
 
-    vector_top_k = 5
-    top_k = 5
+    llm_temperature: float = 0.1
 
+    max_token: int = 1024
+
+
+# =============================================================
+# DEFAULT CONFIG
+# =============================================================
 
 config = Config()
