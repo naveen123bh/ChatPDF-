@@ -9,7 +9,7 @@ from langchain_community.document_loaders import (
     DirectoryLoader,
 )
 
-from config import Config
+from src.config import Config
 
 load_dotenv()
 
