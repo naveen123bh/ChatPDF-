@@ -15,3 +15,4 @@ python-dotenv
 redis
 torch
 torchvision
+rank_bm25
