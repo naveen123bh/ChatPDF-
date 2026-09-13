@@ -39,7 +39,7 @@ st.caption(
 # GROQ API
 # ============================================================
 
-api_key = os.getenv("GROQ_API_KEY")
+api_key = st.secrets.get("GROQ_API_KEY")
 
 if not api_key:
     st.error(
