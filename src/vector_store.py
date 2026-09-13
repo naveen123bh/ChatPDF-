@@ -1,160 +1,93 @@
-from qdrant_client import QdrantClient
+import faiss
+import numpy as np
+
 from langchain_core.documents import Document
-from qdrant_client.models import VectorParams, PointStruct
 from sentence_transformers import SentenceTransformer
-from src.cache import RedisCache
-import hashlib
-from config import Config
+
+from src.config import Config
 
 
 class VectorStore:
 
-    def __init__(self, config: Config, cache: RedisCache):
+    def __init__(
+        self,
+        config: Config,
+        cache=None
+    ):
         self.config = config
-
-        self.client = QdrantClient(
-            url=config.qdrant_url,
-            api_key=config.qdrant_api_key
-        )
-
         self.cache = cache
 
+        # Embedding model
         self.embdeddin_model = SentenceTransformer(
             self.config.embedding_model
         )
 
-        self._ensure_collection()
-
-    def _ensure_collection(self) -> None:
-
-        collections = self.client.get_collections().collections
-
-        collections_names = [
-            c.name for c in collections
-        ]
-
-        if self.config.collection_name not in collections_names:
-
-            self.client.create_collection(
-                collection_name=self.config.collection_name,
-                vectors_config=VectorParams(
-                    size=self.config.vector_size,
-                    distance=self.config.vector_distance
-                )
-            )
-
-            print(
-                f"Created Qdrant collection: "
-                f"{self.config.collection_name}"
-            )
-
-    @staticmethod
-    def _make_id(
-        source: str,
-        page: int,
-        text: str
-    ) -> str:
-
-        raw = hashlib.md5(
-            f"{source}_{page}_{text}".encode()
-        ).hexdigest()
-
-        return (
-            f"{raw[:8]}-"
-            f"{raw[8:12]}-"
-            f"5{raw[13:16]}-"
-            f"{int(raw[16], 16) & 0x3 | 0x8:x}"
-            f"{raw[17:20]}-"
-            f"{raw[20:]}"
+        # FAISS cosine-similarity index
+        # We normalize vectors and use inner product.
+        self.index = faiss.IndexFlatIP(
+            self.config.vector_size
         )
 
-    def _exists(self, point_id: str) -> bool:
+        # Keeps the Document corresponding to each FAISS vector
+        self.documents: list[Document] = []
 
-        return len(
-            self.client.retrieve(
-                collection_name=self.config.collection_name,
-                ids=[point_id],
-                with_vectors=False,
-                with_payload=False,
-            )
-        ) > 0
+    # ---------------------------------------------------------
+    # Ingest documents
+    # ---------------------------------------------------------
 
     def ingest(
         self,
         chunks: list[Document]
     ) -> int:
 
-        points = []
+        if not chunks:
+            print("No chunks to ingest.")
+            return 0
+
+        vectors = []
 
         for chunk in chunks:
 
             text = chunk.page_content
 
-            source = chunk.metadata.get(
-                "source",
-                "unknown"
-            )
+            if self.cache is not None:
 
-            page = chunk.metadata.get(
-                "page",
-                0
-            )
-
-            pid = self._make_id(
-                source,
-                page,
-                text
-            )
-
-            if self._exists(pid):
-                continue
-
-            vector = self.cache.get_or_embed(
-                text,
-                self.embdeddin_model
-            )
-
-            points.append(
-                PointStruct(
-                    id=pid,
-                    vector=vector.tolist(),
-                    payload={
-                        "text": text,
-                        "source": source,
-                        "page": page
-                    },
+                vector = self.cache.get_or_embed(
+                    text,
+                    self.embdeddin_model
                 )
-            )
 
-        batch_size = 50
+            else:
 
-        for i in range(
-            0,
-            len(points),
-            batch_size
-        ):
+                vector = self.embdeddin_model.encode(
+                    text
+                )
 
-            batch = points[
-                i:i + batch_size
-            ]
+            vectors.append(vector)
 
-            self.client.upsert(
-                collection_name=self.config.collection_name,
-                points=batch,
-            )
-
-            print(
-                f"Upserted batch "
-                f"{i // batch_size + 1} — "
-                f"{len(batch)} points"
-            )
-
-        print(
-            f"Inserted {len(points)} "
-            f"new chunks into Qdrant"
+        vectors = np.asarray(
+            vectors,
+            dtype="float32"
         )
 
-        return len(points)
+        # Normalize embeddings so inner product = cosine similarity
+        faiss.normalize_L2(vectors)
+
+        # Add vectors to FAISS
+        self.index.add(vectors)
+
+        # Keep documents in the same order as vectors
+        self.documents.extend(chunks)
+
+        print(
+            f"Inserted {len(chunks)} chunks into FAISS"
+        )
+
+        return len(chunks)
+
+    # ---------------------------------------------------------
+    # Search
+    # ---------------------------------------------------------
 
     def search(
         self,
@@ -162,19 +95,37 @@ class VectorStore:
         top_k: int
     ) -> list[Document]:
 
-        results = self.client.query_points(
-            collection_name=self.config.collection_name,
-            query=query_vector,
-            limit=top_k,
+        if self.index.ntotal == 0:
+            return []
+
+        query_vector = np.asarray(
+            [query_vector],
+            dtype="float32"
         )
 
-        return [
-            Document(
-                page_content=p.payload["text"],
-                metadata={
-                    "source": p.payload["source"],
-                    "page": p.payload["page"]
-                },
+        # Normalize query vector
+        faiss.normalize_L2(query_vector)
+
+        # Don't ask FAISS for more vectors than exist
+        k = min(
+            top_k,
+            self.index.ntotal
+        )
+
+        scores, indices = self.index.search(
+            query_vector,
+            k
+        )
+
+        results = []
+
+        for index in indices[0]:
+
+            if index < 0:
+                continue
+
+            results.append(
+                self.documents[index]
             )
-            for p in results.points
-        ]
+
+        return results
