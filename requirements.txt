@@ -16,3 +16,4 @@ redis
 torch
 torchvision
 rank_bm25
+groq
