@@ -2,7 +2,7 @@ from qdrant_client import QdrantClient
 from langchain_core.documents import Document
 from qdrant_client.models import VectorParams, PointStruct
 from sentence_transformers import SentenceTransformer
-from cache import RedisCache
+from src.cache import RedisCache
 import hashlib
 from config import Config
 
