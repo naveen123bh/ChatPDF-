@@ -30,6 +30,7 @@ st.set_page_config(
 )
 
 st.title("🤖 ChatPDF + Vision")
+
 st.caption(
     "Chat with PDFs or understand images."
 )
@@ -39,7 +40,12 @@ st.caption(
 # GROQ API
 # ============================================================
 
+# First try Streamlit Cloud Secrets
 api_key = st.secrets.get("GROQ_API_KEY")
+
+# Fallback to environment variable
+if not api_key:
+    api_key = os.getenv("GROQ_API_KEY")
 
 if not api_key:
     st.error(
@@ -200,7 +206,9 @@ if mode == "📄 PDF":
 
                 with st.chat_message("user"):
 
-                    st.write(question)
+                    st.write(
+                        question
+                    )
 
                 with st.chat_message(
                     "assistant"
@@ -216,7 +224,9 @@ if mode == "📄 PDF":
                             .answer(question)
                         )
 
-                    st.write(answer)
+                    st.write(
+                        answer
+                    )
 
     else:
 
@@ -238,6 +248,7 @@ else:
         "with your camera."
     )
 
+
     # --------------------------------------------------------
     # IMAGE UPLOAD
     # --------------------------------------------------------
@@ -253,7 +264,9 @@ else:
         key="image_uploader"
     )
 
+
     st.write("**OR**")
+
 
     # --------------------------------------------------------
     # CAMERA
@@ -263,6 +276,7 @@ else:
         "📷 Take a photo",
         key="camera_input"
     )
+
 
     # --------------------------------------------------------
     # SELECT IMAGE
@@ -278,6 +292,7 @@ else:
 
         image = uploaded_image
 
+
     # --------------------------------------------------------
     # DISPLAY IMAGE
     # --------------------------------------------------------
@@ -292,16 +307,25 @@ else:
 
         st.divider()
 
+
+        # ----------------------------------------------------
+        # QUESTION
+        # ----------------------------------------------------
+
         question = st.chat_input(
             "Ask anything about this image...",
             key="vision_chat"
         )
 
+
         if question:
 
             with st.chat_message("user"):
 
-                st.write(question)
+                st.write(
+                    question
+                )
+
 
             with st.chat_message(
                 "assistant"
@@ -310,6 +334,10 @@ else:
                 with st.spinner(
                     "Analyzing image..."
                 ):
+
+                    # ----------------------------------------
+                    # ENCODE IMAGE
+                    # ----------------------------------------
 
                     image_bytes = (
                         image.getvalue()
@@ -328,22 +356,32 @@ else:
                         f"base64,{base64_image}"
                     )
 
+
+                    # ----------------------------------------
+                    # GROQ VISION REQUEST
+                    # ----------------------------------------
+
                     response = (
                         groq_client
                         .chat
                         .completions
                         .create(
                             model=VISION_MODEL,
+
                             messages=[
                                 {
                                     "role": "user",
+
                                     "content": [
                                         {
                                             "type": "text",
+
                                             "text": question
                                         },
+
                                         {
                                             "type": "image_url",
+
                                             "image_url": {
                                                 "url": image_data
                                             }
@@ -351,10 +389,17 @@ else:
                                     ]
                                 }
                             ],
+
                             temperature=0.7,
+
                             max_completion_tokens=1024
                         )
                     )
+
+
+                    # ----------------------------------------
+                    # ANSWER
+                    # ----------------------------------------
 
                     answer = (
                         response
@@ -363,7 +408,10 @@ else:
                         .content
                     )
 
-                st.write(answer)
+                st.write(
+                    answer
+                )
+
 
     else:
 
