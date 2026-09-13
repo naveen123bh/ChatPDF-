@@ -1,52 +1,68 @@
+
 from dotenv import load_dotenv
+
 from langchain_core.documents import Document
-from langchain_experimental.text_splitter import SemanticChunker
-from langchain_huggingface import HuggingFaceEmbeddings
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct, Document , UpdateMode
-from config import Config
-import hashlib
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
 from langchain_community.document_loaders import (
     PyMuPDFLoader,
-    DirectoryLoader
+    DirectoryLoader,
 )
-from sentence_transformers import (
-    SentenceTransformer,
-    CrossEncoder
-)
+
+from config import Config
+
 load_dotenv()
+
 
 class DocumentIngestion:
 
-    def __init__(self,config:Config):
+    def __init__(self, config: Config):
         self.config = config
 
-    def loadDoc(self):
+    def loadDoc(self) -> list[Document]:
         path = self.config.path
+
         directory_loader = DirectoryLoader(
             path,
-            glob = "**/*.pdf",
-            loader_cls = PyMuPDFLoader,
-            show_progress = False
+            glob="**/*.pdf",
+            loader_cls=PyMuPDFLoader,
+            show_progress=False,
         )
+
         docs = directory_loader.load()
+
+        print(f"Loaded {len(docs)} PDF pages")
+
         return docs
-    
-    def chunking(self, docs:list[Document])->list[Document]:
-        chunking_model = HuggingFaceEmbeddings(
-            model_name = self.config.chunking_model
+
+    def chunking(self, docs: list[Document]) -> list[Document]:
+
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=150,
+            separators=[
+                "\n\n",
+                "\n",
+                ". ",
+                "? ",
+                "! ",
+                "; ",
+                ", ",
+                " ",
+                "",
+            ],
         )
-        text_splitter = SemanticChunker(
-            chunking_model,
-            breakpoint_threshold_type= self.config.breakpoint_threshold_type,
-            breakpoint_threshold_amount = self.config.breakpoint_threshold_amount
-        )
+
         chunks = text_splitter.split_documents(docs)
+
+        print(f"Created {len(chunks)} chunks")
+
         return chunks
-    
-    def load_and_chunk(self)->list[Document]:
-        return self.chunking(self.loadDoc())// update 2024-02-08 17:36:46
-// update 2024-03-13 17:39:52
-// update 2024-03-21 10:9:9
-// update 2024-04-16 17:10:46
-// update 2024-04-22 10:2:28
+
+    def load_and_chunk(self) -> list[Document]:
+
+        docs = self.loadDoc()
+
+        chunks = self.chunking(docs)
+
+        return chunks
