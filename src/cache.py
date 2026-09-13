@@ -3,7 +3,7 @@ import redis
 import hashlib
 import numpy as np
 
-from config import Config
+from src.config import Config
 
 
 class RedisCache:
