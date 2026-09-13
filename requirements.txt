@@ -13,3 +13,5 @@ chromadb
 qdrant-client
 python-dotenv
 redis
+torch
+torchvision
