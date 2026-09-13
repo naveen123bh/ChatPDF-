@@ -1,6 +1,7 @@
-import streamlit as st
 import os
 import tempfile
+
+import streamlit as st
 
 from src.config import Config
 from src.ingestion import DocumentIngestion
@@ -8,6 +9,10 @@ from src.vector_store import VectorStore
 from src.cache import RedisCache
 from src.retrieval import HybridRetriever, RAGPipeline
 
+
+# =============================================================
+# PAGE CONFIG
+# =============================================================
 
 st.set_page_config(
     page_title="ChatPDF",
@@ -17,12 +22,14 @@ st.set_page_config(
 
 
 st.title("📚 ChatPDF")
-st.caption("Upload a PDF and ask questions about it.")
+st.caption(
+    "Upload a PDF and ask questions about it."
+)
 
 
-# =========================
-# Session State
-# =========================
+# =============================================================
+# SESSION STATE
+# =============================================================
 
 if "pipeline" not in st.session_state:
     st.session_state.pipeline = None
@@ -30,10 +37,13 @@ if "pipeline" not in st.session_state:
 if "document_name" not in st.session_state:
     st.session_state.document_name = None
 
+if "document_id" not in st.session_state:
+    st.session_state.document_id = None
 
-# =========================
-# Upload PDF
-# =========================
+
+# =============================================================
+# PDF UPLOAD
+# =============================================================
 
 uploaded_file = st.file_uploader(
     "Upload your PDF",
@@ -43,11 +53,24 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file is not None:
 
-    # Avoid rebuilding when same PDF is already loaded
-    if st.session_state.document_name != uploaded_file.name:
+    # Use file name + size as a simple document identity.
+    # This prevents unnecessary rebuilding on normal Streamlit reruns.
+    document_id = (
+        f"{uploaded_file.name}:"
+        f"{uploaded_file.size}"
+    )
 
-        with st.spinner("Processing PDF..."):
+    # ---------------------------------------------------------
+    # Build pipeline only when a new PDF is uploaded
+    # ---------------------------------------------------------
 
+    if st.session_state.document_id != document_id:
+
+        with st.spinner(
+            "Processing PDF..."
+        ):
+
+            # Create temporary directory
             temp_dir = tempfile.mkdtemp()
 
             pdf_path = os.path.join(
@@ -55,36 +78,70 @@ if uploaded_file is not None:
                 uploaded_file.name
             )
 
-            with open(pdf_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
+            # Save uploaded PDF
+            with open(
+                pdf_path,
+                "wb"
+            ) as f:
 
-            # =========================
-            # Build existing RAG pipeline
-            # =========================
+                f.write(
+                    uploaded_file.getbuffer()
+                )
+
+            # -------------------------------------------------
+            # Configuration
+            # -------------------------------------------------
 
             config = Config()
 
-            # Point ingestion to uploaded PDF
+            # Tell ingestion where the uploaded PDF lives
             config.path = temp_dir
 
-            loader = DocumentIngestion(config)
+            # -------------------------------------------------
+            # Load + chunk PDF
+            # -------------------------------------------------
+
+            loader = DocumentIngestion(
+                config
+            )
 
             chunks = loader.load_and_chunk()
 
-            cache = RedisCache(config)
+            # -------------------------------------------------
+            # Create memory cache
+            # -------------------------------------------------
+
+            cache = RedisCache(
+                config
+            )
+
+            # -------------------------------------------------
+            # Create FAISS vector store
+            # -------------------------------------------------
 
             vector_store = VectorStore(
                 config,
                 cache
             )
 
-            vector_store.ingest(chunks)
+            # Insert document chunks into FAISS
+            vector_store.ingest(
+                chunks
+            )
+
+            # -------------------------------------------------
+            # Hybrid retriever
+            # -------------------------------------------------
 
             retriever = HybridRetriever(
                 chunks,
                 vector_store,
                 config
             )
+
+            # -------------------------------------------------
+            # Complete RAG pipeline
+            # -------------------------------------------------
 
             pipeline = RAGPipeline(
                 config,
@@ -93,23 +150,36 @@ if uploaded_file is not None:
                 vector_store
             )
 
+            # -------------------------------------------------
+            # Save everything in Streamlit session
+            # -------------------------------------------------
+
             st.session_state.pipeline = pipeline
-            st.session_state.document_name = uploaded_file.name
+
+            st.session_state.document_name = (
+                uploaded_file.name
+            )
+
+            st.session_state.document_id = (
+                document_id
+            )
 
         st.success(
             f"✅ {uploaded_file.name} is ready!"
         )
 
 
-# =========================
-# Ask Question
-# =========================
+# =============================================================
+# CHAT
+# =============================================================
 
 if st.session_state.pipeline is not None:
 
     st.divider()
 
-    st.subheader("Ask a question")
+    st.subheader(
+        f"📖 {st.session_state.document_name}"
+    )
 
     question = st.chat_input(
         "Ask something about your PDF..."
@@ -117,18 +187,44 @@ if st.session_state.pipeline is not None:
 
     if question:
 
-        with st.chat_message("user"):
-            st.write(question)
+        # -----------------------------------------------------
+        # User message
+        # -----------------------------------------------------
 
-        with st.chat_message("assistant"):
+        with st.chat_message(
+            "user"
+        ):
 
-            with st.spinner("Thinking..."):
+            st.write(
+                question
+            )
 
-                answer = st.session_state.pipeline.answer(
-                    question
+        # -----------------------------------------------------
+        # Assistant response
+        # -----------------------------------------------------
+
+        with st.chat_message(
+            "assistant"
+        ):
+
+            with st.spinner(
+                "Searching document..."
+            ):
+
+                answer = (
+                    st.session_state.pipeline.answer(
+                        question
+                    )
                 )
 
-            st.write(answer)
+            st.write(
+                answer
+            )
+
+
+# =============================================================
+# EMPTY STATE
+# =============================================================
 
 else:
 
