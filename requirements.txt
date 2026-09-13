@@ -1,12 +1,15 @@
+streamlit
 langchain
 langchain-core
 langchain-community==0.4.1
+langchain-experimental
+langchain-huggingface
+langchain-groq
 pypdf
 pymupdf
 sentence-transformers
 faiss-cpu
 chromadb
-langchain-groq
+qdrant-client
 python-dotenv
 redis
-
