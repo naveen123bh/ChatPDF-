@@ -16,8 +16,8 @@ from src.retrieval import HybridRetriever, RAGPipeline
 # CONFIG
 # ============================================================
 
-VISION_MODEL = "qwen/qwen3.6-27b"
 
+VISION_MODEL = "qwen/qwen3.8-27b"
 
 # ============================================================
 # PAGE
