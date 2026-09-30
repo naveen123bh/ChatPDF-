@@ -1,4 +1,4 @@
-import o
+import os
 import base64
 import tempfile
 
@@ -45,11 +45,11 @@ api_key = st.secrets.get("GROQ_API_KEY")
 
 # Fallback to environment variable
 if not api_key:
-    api_key = os.getenv("GROQ_API_KEY")
+    api_ke = os.getenv("GROQ_API_KEY")
 
 if not api_key:
     st.error(
-        "GROQ_API_KEY is not configured."
+        "naveen_API_KEY is not configured may be Naveen's server is offline or switched off ."
     )
     st.stop()
 
