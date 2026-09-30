@@ -63,7 +63,7 @@ groq_client = Groq(
 # ============================================================
 
 mode = st.radio(
-    "Choose what you want to use",
+    "sanket Choose what you want to use",
     [
         "📄 PDF",
         "🖼️ Image"
