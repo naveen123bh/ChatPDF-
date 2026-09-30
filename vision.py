@@ -63,7 +63,7 @@ groq_client = Groq(
 # ============================================================
 
 mode = st.radio(
-    "sanket Choose what you want to use",
+    "Naveen's server is offline wait for on Choose what you want to use",
     [
         "📄 PDF",
         "🖼️ Image"
