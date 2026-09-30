@@ -45,7 +45,7 @@ api_key = st.secrets.get("GROQ_API_KEY")
 
 # Fallback to environment variable
 if not api_key:
-    api_ke = os.getenv("GROQ_API_KEY")
+    api_key = os.getenv("GROQ_API_KEY")
 
 if not api_key:
     st.error(
