@@ -3,7 +3,7 @@ import os
 import base64
 import tempfile
 
-import streamlit3 as st
+import streamlit as st
 from groq import Groq
 
 from src.config import Config
